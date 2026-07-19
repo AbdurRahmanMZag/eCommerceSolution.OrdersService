@@ -17,11 +17,12 @@ public class OrdersService : IOrdersService
     private readonly IValidator<OrderUpdateRequest> _orderUpdateRequestValidator;
     private readonly IValidator<OrderItemUpdateRequest> _orderItemUpdateRequestValidator;
     private readonly IMapper _mapper;
-    private readonly IOrdersRepository _ordersRepository;
-    private readonly UsersMicroserviceClient _usersMicroserviceClient;
+    private IOrdersRepository _ordersRepository;
+    private UsersMicroserviceClient _usersMicroserviceClient;
+    private ProductsMicroserviceClient _productsMicroserviceClient;
 
-    public OrdersService(IOrdersRepository ordersRepository, IMapper mapper, IValidator<OrderAddRequest> orderAddRequestValidator, IValidator<OrderItemAddRequest> orderItemAddRequestValidator, IValidator<OrderUpdateRequest> orderUpdateRequestValidator, IValidator<OrderItemUpdateRequest> orderItemUpdateRequestValidator,
-        UsersMicroserviceClient usersMicroserviceClient)
+
+    public OrdersService(IOrdersRepository ordersRepository, IMapper mapper, IValidator<OrderAddRequest> orderAddRequestValidator, IValidator<OrderItemAddRequest> orderItemAddRequestValidator, IValidator<OrderUpdateRequest> orderUpdateRequestValidator, IValidator<OrderItemUpdateRequest> orderItemUpdateRequestValidator, UsersMicroserviceClient usersMicroserviceClient, ProductsMicroserviceClient productsMicroserviceClient)
     {
         _orderAddRequestValidator = orderAddRequestValidator;
         _orderItemAddRequestValidator = orderItemAddRequestValidator;
@@ -30,6 +31,7 @@ public class OrdersService : IOrdersService
         _mapper = mapper;
         _ordersRepository = ordersRepository;
         _usersMicroserviceClient = usersMicroserviceClient;
+        _productsMicroserviceClient = productsMicroserviceClient;
     }
 
 
@@ -60,6 +62,14 @@ public class OrdersService : IOrdersService
                 string errors = string.Join(", ", orderItemAddRequestValidationResult.Errors.Select(temp => temp.ErrorMessage));
                 throw new ArgumentException(errors);
             }
+
+
+            //TO DO: Add logic for checking if ProductID exists in Products microservice
+            ProductDTO? product = await _productsMicroserviceClient.GetProductByProductID(orderItemAddRequest.ProductID);
+            if(product == null)
+            {
+                throw new ArgumentException("Invalid Product ID");
+            }
         }
 
         //TO DO: Add logic for checking if UserID exists in Users microservice
@@ -68,6 +78,7 @@ public class OrdersService : IOrdersService
         {
             throw new ArgumentException("Invalid User ID");
         }
+
 
         //Convert data from OrderAddRequest to Order
         Order orderInput = _mapper.Map<Order>(orderAddRequest); //Map OrderAddRequest to 'Order' type (it invokes OrderAddRequestToOrderMappingProfile class)
@@ -92,6 +103,8 @@ public class OrdersService : IOrdersService
 
         return addedOrderResponse;
     }
+
+
 
     public async Task<OrderResponse?> UpdateOrder(OrderUpdateRequest orderUpdateRequest)
     {
@@ -119,6 +132,14 @@ public class OrdersService : IOrdersService
             {
                 string errors = string.Join(", ", orderItemUpdateRequestValidationResult.Errors.Select(temp => temp.ErrorMessage));
                 throw new ArgumentException(errors);
+            }
+
+
+            //TO DO: Add logic for checking if ProductID exists in Products microservice
+            ProductDTO? product = await _productsMicroserviceClient.GetProductByProductID(orderItemUpdateRequest.ProductID);
+            if(product == null)
+            {
+                throw new ArgumentException("Invalid Product ID");
             }
         }
 
@@ -149,10 +170,11 @@ public class OrdersService : IOrdersService
             return null;
         }
 
-        OrderResponse addedOrderResponse = _mapper.Map<OrderResponse>(updatedOrder); //Map addedOrder ('Order' type) into 'OrderResponse' type (it invokes OrderToOrderResponseMappingProfile).
+        OrderResponse updatedOrderResponse = _mapper.Map<OrderResponse>(updatedOrder); //Map updatedOrder ('Order' type) into 'OrderResponse' type (it invokes OrderToOrderResponseMappingProfile).
 
-        return addedOrderResponse;
+        return updatedOrderResponse;
     }
+
 
     public async Task<bool> DeleteOrder(Guid orderID)
     {
@@ -169,6 +191,7 @@ public class OrdersService : IOrdersService
         return isDeleted;
     }
 
+
     public async Task<OrderResponse?> GetOrderByCondition(FilterDefinition<Order> filter)
     {
         Order? order = await _ordersRepository.GetOrderByCondition(filter);
@@ -179,6 +202,17 @@ public class OrdersService : IOrdersService
         return orderResponse;
     }
 
+
+    public async Task<List<OrderResponse?>> GetOrdersByCondition(FilterDefinition<Order> filter)
+    {
+        IEnumerable<Order?> orders = await _ordersRepository.GetOrdersByCondition(filter);
+
+
+        IEnumerable<OrderResponse?> orderResponses = _mapper.Map<IEnumerable<OrderResponse>>(orders);
+        return orderResponses.ToList();
+    }
+
+
     public async Task<List<OrderResponse?>> GetOrders()
     {
         IEnumerable<Order?> orders = await _ordersRepository.GetOrders();
@@ -187,14 +221,4 @@ public class OrdersService : IOrdersService
         IEnumerable<OrderResponse?> orderResponses = _mapper.Map<IEnumerable<OrderResponse>>(orders);
         return orderResponses.ToList();
     }
-
-    public async Task<List<OrderResponse?>> GetOrdersByCondition(FilterDefinition<Order> filter)
-    {
-        IEnumerable<Order?> orders = await _ordersRepository.GetOrdersByCondition(filter);
-
-
-        IEnumerable<OrderResponse?> orderResponses = _mapper.Map<IEnumerable<OrderResponse>>(orders);
-        return [.. orderResponses];
-    }
-
 }

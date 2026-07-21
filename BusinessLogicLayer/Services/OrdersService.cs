@@ -51,7 +51,7 @@ public class OrdersService : IOrdersService
             string errors = string.Join(", ", orderAddRequestValidationResult.Errors.Select(temp => temp.ErrorMessage));
             throw new ArgumentException(errors);
         }
-
+        List<ProductDTO> products = new List<ProductDTO>();
         //Validate order items using Fluent Validation
         foreach(OrderItemAddRequest orderItemAddRequest in orderAddRequest.OrderItems)
         {
@@ -70,6 +70,7 @@ public class OrdersService : IOrdersService
             {
                 throw new ArgumentException("Invalid Product ID");
             }
+            products.Add(product);
         }
 
         //TO DO: Add logic for checking if UserID exists in Users microservice
@@ -98,8 +99,16 @@ public class OrdersService : IOrdersService
         {
             return null;
         }
-
+        
         OrderResponse addedOrderResponse = _mapper.Map<OrderResponse>(addedOrder); //Map addedOrder ('Order' type) into 'OrderResponse' type (it invokes OrderToOrderResponseMappingProfile).
+        foreach(OrderItemResponse orderItemResponse in addedOrderResponse.OrderItems)
+        {
+            foreach(ProductDTO productDTO in products)
+            {
+                _mapper.Map<ProductDTO, OrderItemResponse>(productDTO, orderItemResponse);
+            }
+
+        }
 
         return addedOrderResponse;
     }
@@ -122,7 +131,7 @@ public class OrdersService : IOrdersService
             string errors = string.Join(", ", orderUpdateRequestValidationResult.Errors.Select(temp => temp.ErrorMessage));
             throw new ArgumentException(errors);
         }
-
+        List<ProductDTO> products = new List<ProductDTO>();
         //Validate order items using Fluent Validation
         foreach(OrderItemUpdateRequest orderItemUpdateRequest in orderUpdateRequest.OrderItems)
         {
@@ -141,6 +150,7 @@ public class OrdersService : IOrdersService
             {
                 throw new ArgumentException("Invalid Product ID");
             }
+            products.Add(product);
         }
 
         //TO DO: Add logic for checking if UserID exists in Users microservice
@@ -172,6 +182,14 @@ public class OrdersService : IOrdersService
 
         OrderResponse updatedOrderResponse = _mapper.Map<OrderResponse>(updatedOrder); //Map updatedOrder ('Order' type) into 'OrderResponse' type (it invokes OrderToOrderResponseMappingProfile).
 
+        foreach(OrderItemResponse orderItemResponse in updatedOrderResponse.OrderItems)
+        {
+            foreach(ProductDTO productDTO in products)
+            {
+                _mapper.Map<ProductDTO, OrderItemResponse>(productDTO, orderItemResponse);
+            }
+
+        }
         return updatedOrderResponse;
     }
 
@@ -199,6 +217,16 @@ public class OrdersService : IOrdersService
             return null;
 
         OrderResponse orderResponse = _mapper.Map<OrderResponse>(order);
+
+        
+            foreach(OrderItemResponse orderItem in orderResponse.OrderItems)
+            {
+                ProductDTO? products = await _productsMicroserviceClient.GetProductByProductID(orderItem.ProductID);
+                if(products != null)
+                    _mapper.Map<ProductDTO, OrderItemResponse>(products, orderItem);
+
+            }
+
         return orderResponse;
     }
 
@@ -209,6 +237,23 @@ public class OrdersService : IOrdersService
 
 
         IEnumerable<OrderResponse?> orderResponses = _mapper.Map<IEnumerable<OrderResponse>>(orders);
+
+        foreach(OrderResponse? order in orderResponses)
+        {
+            if(order == null)
+            {
+                continue;
+            }
+            foreach(OrderItemResponse orderItem in order.OrderItems)
+            {
+                ProductDTO? products = await _productsMicroserviceClient.GetProductByProductID(orderItem.ProductID);
+                if(products != null)
+                    _mapper.Map<ProductDTO, OrderItemResponse>(products, orderItem);
+
+            }
+
+        }
+
         return orderResponses.ToList();
     }
 
@@ -219,6 +264,23 @@ public class OrdersService : IOrdersService
 
 
         IEnumerable<OrderResponse?> orderResponses = _mapper.Map<IEnumerable<OrderResponse>>(orders);
-        return orderResponses.ToList();
+
+        foreach(OrderResponse? order in orderResponses)
+        {
+            if(order == null)
+            {
+                continue;
+            }
+                foreach(OrderItemResponse orderItem in order.OrderItems)
+                {
+                ProductDTO? products = await _productsMicroserviceClient.GetProductByProductID(orderItem.ProductID);
+                if(products != null)
+                 _mapper.Map<ProductDTO, OrderItemResponse>(products, orderItem);
+
+                }
+
+            }
+            return orderResponses.ToList();
+
     }
 }

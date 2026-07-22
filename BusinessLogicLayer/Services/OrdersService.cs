@@ -120,6 +120,16 @@ public class OrdersService : IOrdersService
         }
 
 
+
+        //TO DO: Load UserPersonName and Email from Users Microservice
+        if(addedOrderResponse != null)
+        {
+            if(user != null)
+            {
+                _mapper.Map<UserDTO, OrderResponse>(user, addedOrderResponse);
+            }
+        }
+
         return addedOrderResponse;
     }
 
@@ -210,6 +220,16 @@ public class OrdersService : IOrdersService
             }
         }
 
+
+        //TO DO: Load UserPersonName and Email from Users Microservice
+        if(updatedOrderResponse != null)
+        {
+            if(user != null)
+            {
+                _mapper.Map<UserDTO, OrderResponse>(user, updatedOrderResponse);
+            }
+        }
+
         return updatedOrderResponse;
     }
 
@@ -253,6 +273,17 @@ public class OrdersService : IOrdersService
             }
         }
 
+
+        //TO DO: Load UserPersonName and Email from Users Microservice
+        if(orderResponse != null)
+        {
+            UserDTO? user = await _usersMicroserviceClient.GetUserByUserID(orderResponse.UserID);
+            if(user != null)
+            {
+                _mapper.Map<UserDTO, OrderResponse>(user, orderResponse);
+            }
+        }
+
         return orderResponse;
     }
 
@@ -282,6 +313,14 @@ public class OrdersService : IOrdersService
 
                 _mapper.Map<ProductDTO, OrderItemResponse>(productDTO, orderItemResponse);
             }
+
+
+            //TO DO: Load UserPersonName and Email from Users Microservice
+            UserDTO? user = await _usersMicroserviceClient.GetUserByUserID(orderResponse.UserID);
+            if(user != null)
+            {
+                _mapper.Map<UserDTO, OrderResponse>(user, orderResponse);
+            }
         }
 
         return orderResponses.ToList();
@@ -291,7 +330,6 @@ public class OrdersService : IOrdersService
     public async Task<List<OrderResponse?>> GetOrders()
     {
         IEnumerable<Order?> orders = await _ordersRepository.GetOrders();
-
 
         IEnumerable<OrderResponse?> orderResponses = _mapper.Map<IEnumerable<OrderResponse>>(orders);
 
@@ -313,7 +351,16 @@ public class OrdersService : IOrdersService
 
                 _mapper.Map<ProductDTO, OrderItemResponse>(productDTO, orderItemResponse);
             }
+
+
+            //TO DO: Load UserPersonName and Email from Users Microservice
+            UserDTO? user = await _usersMicroserviceClient.GetUserByUserID(orderResponse.UserID);
+            if(user != null)
+            {
+                _mapper.Map<UserDTO, OrderResponse>(user, orderResponse);
+            }
         }
+
 
         return orderResponses.ToList();
     }

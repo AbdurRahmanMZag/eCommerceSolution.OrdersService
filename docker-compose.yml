@@ -7,6 +7,7 @@ services:
       context: .
       dockerfile: OrdersMicroservice.API/Dockerfile
     environment:
+     - ASPNETCORE_URLS=http://+:8080
      - MONGODB_HOST=mongodb-container
      - MONGODB_PORT=27017
      - MONGODB_DATABASE=OrdersDatabase
@@ -15,7 +16,7 @@ services:
      - ProductsMicroserviceName=products-microservice
      - ProductsMicroservicePort=8080
     ports:
-     - "7000:8080"
+     - "7001:8080"
     networks:
      - orders-mongodb-network
      - ecommerce-network
@@ -44,7 +45,7 @@ services:
     - MYSQL_USER=root
     - MYSQL_PASSWORD=admin
    ports:
-    - "6000:8080"
+    - "6001:8080"
    networks:
     - products-mysql-network
     - ecommerce-network
